@@ -15,10 +15,4 @@ import java.util.UUID;
 public interface CalculationRepository extends JpaRepository<GradeEntity, UUID> {
 
 
-    @Query("SELECT g FROM GradeEntity g WHERE g.subjectEntity.identifier = :subjectId " +
-            "AND g.gradingDate BETWEEN :startDate AND :endDate")
-    List<GradeEntity> findBySubjectAndGradingDateBetween(
-            @Param("subjectId") UUID subjectId,
-            @Param("startDate") Date startDate,
-            @Param("endDate") Date endDate);
 }
