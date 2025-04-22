@@ -22,5 +22,5 @@ WORKDIR /opt/app
 
 COPY --from=builder /opt/app/build/libs/*.jar app.jar
 
-EXPOSE 8081  # Different port from main service
+EXPOSE 8081
 ENTRYPOINT ["java", "-jar", "/opt/app/app.jar"]
