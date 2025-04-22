@@ -33,7 +33,7 @@ public class CalculationService {
 
         // Fetch all grades from the grades service
         ResponseEntity<GradeDTO[]> response = restTemplate.getForEntity(
-                "http://localhost:8080/grades",
+                "http://school_journal_app:8080/grades",
                 GradeDTO[].class
         );
 
