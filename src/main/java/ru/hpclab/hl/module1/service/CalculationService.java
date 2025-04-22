@@ -1,37 +1,59 @@
 package ru.hpclab.hl.module1.service;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
+import ru.hpclab.hl.module1.DTO.GradeDTO;
 import ru.hpclab.hl.module1.Entity.GradeEntity;
 import ru.hpclab.hl.module1.repository.CalculationRepository;
 
-import java.util.Calendar;
-import java.util.Date;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
+import java.util.stream.Collectors;
 
 
 @Service
 public class CalculationService {
-    private final CalculationRepository calculationRepository;
+    private final RestTemplate restTemplate;
+    private final String gradeServiceUrl;
 
     @Autowired
-    public CalculationService(CalculationRepository gradeRepository) {
-        this.calculationRepository = gradeRepository;
+    public CalculationService(RestTemplate restTemplate,
+                              @Value("${grade.service.url}") String gradeServiceUrl) {
+        this.restTemplate = restTemplate;
+        this.gradeServiceUrl = gradeServiceUrl;
     }
 
     public double calculateAverageGradeForClass(UUID subjectId, int year) {
-        Date startDate = getStartOfYear(year);
-        Date endDate = getEndOfYear(year);
+        // 1. Get all grades from main service
+        GradeDTO[] grades = restTemplate.getForObject(
+                gradeServiceUrl + "/grades",
+                GradeDTO[].class
+        );
 
-        List<GradeEntity> grades = calculationRepository.findBySubjectAndGradingDateBetween(subjectId, startDate, endDate);
-
-        if (grades.isEmpty()) {
+        if (grades == null || grades.length == 0) {
             return 0.0;
         }
 
-        double sum = grades.stream().mapToInt(GradeEntity::getGradeValue).sum();
-        return sum / grades.size();
+        // 2. Filter and calculate in Java (not DB)
+        Date startDate = getStartOfYear(year);
+        Date endDate = getEndOfYear(year);
+
+        List<GradeDTO> filteredGrades = Arrays.stream(grades)
+                .filter(g -> g.getSubjectId().equals(subjectId))
+                .filter(g -> !g.getGradingDate().before(startDate))
+                .filter(g -> !g.getGradingDate().after(endDate))
+                .toList();
+
+        if (filteredGrades.isEmpty()) {
+            return 0.0;
+        }
+
+        // 3. Calculate average
+        return filteredGrades.stream()
+                .mapToInt(GradeDTO::getGradeValue)
+                .average()
+                .orElse(0.0);
     }
 
     private Date getStartOfYear(int year) {
