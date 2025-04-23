@@ -1,0 +1,5 @@
+school-journal:
+  base-url: http://school-journal-app:8080
+  endpoints:
+    grades: /grades
+    subjects: /subjects

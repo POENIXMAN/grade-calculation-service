@@ -5,6 +5,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
+import ru.hpclab.hl.module1.Configuration.SchoolJournalClientProperties;
 import ru.hpclab.hl.module1.DTO.ClassAverageDTO;
 import ru.hpclab.hl.module1.DTO.GradeDTO;
 import ru.hpclab.hl.module1.DTO.SubjectDTO;
@@ -19,34 +20,36 @@ import java.util.stream.Collectors;
 @Service
 public class CalculationService {
     private final RestTemplate restTemplate;
-    private final CalculationRepository calculationRepository;
+    private final SchoolJournalClientProperties clientProperties;
 
     @Autowired
     public CalculationService(
-            RestTemplate restTemplate,
-            CalculationRepository calculationRepository
-    ) {
+            RestTemplate restTemplate, SchoolJournalClientProperties clientProperties
+            ) {
         this.restTemplate = restTemplate;
-        this.calculationRepository = calculationRepository;
+        this.clientProperties = clientProperties;
     }
 
     public List<ClassAverageDTO> calculateAverageGradesForAllClasses(int year) {
         Date startDate = getStartOfYear(year);
         Date endDate = getEndOfYear(year);
 
-        ResponseEntity<GradeDTO[]> response = restTemplate.getForEntity(
-                "http://school-journal-app:8080/grades",
+        String gradesUrl = clientProperties.getBaseUrl() + clientProperties.getEndpoints().getGrades();
+        String subjectsUrl = clientProperties.getBaseUrl() + clientProperties.getEndpoints().getSubjects();
+
+        ResponseEntity<GradeDTO[]> gradesResponse = restTemplate.getForEntity(
+                gradesUrl,
                 GradeDTO[].class
         );
 
-        GradeDTO[] allGrades = response.getBody();
-
-        ResponseEntity<SubjectDTO[]> subjects_dto = restTemplate.getForEntity(
-                "http://school-journal-app:8080/subjects",
+        ResponseEntity<SubjectDTO[]> subjectsResponse = restTemplate.getForEntity(
+                subjectsUrl,
                 SubjectDTO[].class
         );
 
-        SubjectDTO[] allSubjects = subjects_dto.getBody();
+        GradeDTO[] allGrades = gradesResponse.getBody();
+
+        SubjectDTO[] allSubjects = subjectsResponse.getBody();
 
         if (allGrades == null || allGrades.length == 0 || allSubjects == null || allSubjects.length == 0) {
             return Collections.emptyList();
