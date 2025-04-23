@@ -22,64 +22,75 @@ public class CalculationService {
     private final RestTemplate restTemplate;
     private final SchoolJournalClientProperties clientProperties;
     private final SubjectCacheService subjectCacheService;
+    private final ObservabilityService observabilityService;
 
     @Autowired
     public CalculationService(
-            RestTemplate restTemplate, SchoolJournalClientProperties clientProperties, SubjectCacheService subjectCacheService
+            RestTemplate restTemplate, SchoolJournalClientProperties clientProperties, SubjectCacheService subjectCacheService, ObservabilityService observabilityService
     ) {
         this.restTemplate = restTemplate;
         this.clientProperties = clientProperties;
         this.subjectCacheService = subjectCacheService;
+        this.observabilityService = observabilityService;
     }
 
     public List<ClassAverageDTO> calculateAverageGradesForAllClasses(int year) {
-        Date startDate = getStartOfYear(year);
-        Date endDate = getEndOfYear(year);
+        return observabilityService.measure(
+                ObservabilityService.OperationType.STATISTICS_CALCULATION,
+                "calculateAverageGradesForAllClasses",
+                () -> {
+                    Date startDate = getStartOfYear(year);
+                    Date endDate = getEndOfYear(year);
 
-        String gradesUrl = clientProperties.getBaseUrl() + clientProperties.getEndpoints().getGrades();
+                    GradeDTO[] allGrades = observabilityService.measure(
+                            ObservabilityService.OperationType.EXTERNAL_SERVICE_CALL,
+                            "getGradesFromExternalService",
+                            () -> {
+                                String gradesUrl = clientProperties.getBaseUrl() + clientProperties.getEndpoints().getGrades();
+                                ResponseEntity<GradeDTO[]> gradesResponse = restTemplate.getForEntity(
+                                        gradesUrl,
+                                        GradeDTO[].class
+                                );
+                                return gradesResponse.getBody();
+                            }
+                    );
 
-        ResponseEntity<GradeDTO[]> gradesResponse = restTemplate.getForEntity(
-                gradesUrl,
-                GradeDTO[].class
+                    if (allGrades == null || allGrades.length == 0) {
+                        return Collections.emptyList();
+                    }
+
+                    Map<UUID, String> subjectIdToClassName = subjectCacheService.getSubjectCache();
+                    if (subjectIdToClassName.isEmpty()) {
+                        return Collections.emptyList();
+                    }
+
+
+                    List<GradeDTO> gradesInYear = Arrays.stream(allGrades)
+                            .filter(grade -> isDateInRange(grade.getGradingDate(), startDate, endDate))
+                            .toList();
+
+                    Map<String, List<Integer>> classNameToGrades = new HashMap<>();
+
+                    for (GradeDTO grade : gradesInYear) {
+                        String className = subjectIdToClassName.get(grade.getSubjectId());
+                        if (className != null) {
+                            classNameToGrades.computeIfAbsent(className, k -> new ArrayList<>())
+                                    .add(grade.getGradeValue());
+                        }
+                    }
+
+                    List<ClassAverageDTO> result = new ArrayList<>();
+                    for (Map.Entry<String, List<Integer>> entry : classNameToGrades.entrySet()) {
+                        double average = entry.getValue().stream()
+                                .mapToInt(Integer::intValue)
+                                .average()
+                                .orElse(0.0);
+                        result.add(new ClassAverageDTO(entry.getKey(), average));
+                    }
+
+                    return result;
+                }
         );
-
-
-        GradeDTO[] allGrades = gradesResponse.getBody();
-
-        if (allGrades == null || allGrades.length == 0) {
-            return Collections.emptyList();
-        }
-
-        Map<UUID, String> subjectIdToClassName = subjectCacheService.getSubjectCache();
-        if (subjectIdToClassName.isEmpty()) {
-            return Collections.emptyList();
-        }
-
-
-        List<GradeDTO> gradesInYear = Arrays.stream(allGrades)
-                .filter(grade -> isDateInRange(grade.getGradingDate(), startDate, endDate))
-                .toList();
-
-        Map<String, List<Integer>> classNameToGrades = new HashMap<>();
-
-        for (GradeDTO grade : gradesInYear) {
-            String className = subjectIdToClassName.get(grade.getSubjectId());
-            if (className != null) {
-                classNameToGrades.computeIfAbsent(className, k -> new ArrayList<>())
-                        .add(grade.getGradeValue());
-            }
-        }
-
-        List<ClassAverageDTO> result = new ArrayList<>();
-        for (Map.Entry<String, List<Integer>> entry : classNameToGrades.entrySet()) {
-            double average = entry.getValue().stream()
-                    .mapToInt(Integer::intValue)
-                    .average()
-                    .orElse(0.0);
-            result.add(new ClassAverageDTO(entry.getKey(), average));
-        }
-
-        return result;
     }
 
     private boolean isDateInRange(Date dateToCheck, Date startDate, Date endDate) {

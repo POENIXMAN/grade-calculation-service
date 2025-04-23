@@ -19,7 +19,7 @@ import java.util.stream.Collectors;
 @Service
 public class SubjectCacheService {
 
-    @Value("${subjectcache.cachestatstring:Subject cache info}")
+    @Value("${subjectcache.cachestatstring}")
     private String cacheInfoString;
 
     private final int printDelay;
@@ -30,7 +30,7 @@ public class SubjectCacheService {
     private long lastUpdateTime = 0;
 
     public SubjectCacheService(
-            @Value("${subjectcache.printdelay:5000}") int printDelay,
+            @Value("${subjectcache.printdelay}") int printDelay,
             RestTemplate restTemplate,
             SchoolJournalClientProperties clientProperties) {
         this.printDelay = printDelay;
@@ -60,16 +60,16 @@ public class SubjectCacheService {
         }
     }
 
-    @Async
-    @Scheduled(fixedRateString = "${subjectcache.statistics.rate:5000}")
-    public void printCacheStatistics() throws InterruptedException {
-        System.out.println(
-                Thread.currentThread().getName() + " - Subject cache statistics - " +
-                        printDelay + "ms - " + cacheInfoString + " - " +
-                        "Cache size: " + subjectCache.size() +
-                        ", Last updated: " + (lastUpdateTime > 0 ?
-                        (System.currentTimeMillis() - lastUpdateTime) / 1000 + " seconds ago" : "never"));
-        Thread.sleep(printDelay);
-    }
+//    @Async
+//    @Scheduled(fixedRateString = "${subjectcache.statistics.rate}")
+//    public void printCacheStatistics() throws InterruptedException {
+//        System.out.println(
+//                Thread.currentThread().getName() + " - Subject cache statistics - " +
+//                        printDelay + "ms - " + cacheInfoString + " - " +
+//                        "Cache size: " + subjectCache.size() +
+//                        ", Last updated: " + (lastUpdateTime > 0 ?
+//                        (System.currentTimeMillis() - lastUpdateTime) / 1000 + " seconds ago" : "never"));
+//        Thread.sleep(printDelay);
+//    }
 
 }
