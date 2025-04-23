@@ -21,13 +21,15 @@ import java.util.stream.Collectors;
 public class CalculationService {
     private final RestTemplate restTemplate;
     private final SchoolJournalClientProperties clientProperties;
+    private final SubjectCacheService subjectCacheService;
 
     @Autowired
     public CalculationService(
-            RestTemplate restTemplate, SchoolJournalClientProperties clientProperties
-            ) {
+            RestTemplate restTemplate, SchoolJournalClientProperties clientProperties, SubjectCacheService subjectCacheService
+    ) {
         this.restTemplate = restTemplate;
         this.clientProperties = clientProperties;
+        this.subjectCacheService = subjectCacheService;
     }
 
     public List<ClassAverageDTO> calculateAverageGradesForAllClasses(int year) {
@@ -35,37 +37,29 @@ public class CalculationService {
         Date endDate = getEndOfYear(year);
 
         String gradesUrl = clientProperties.getBaseUrl() + clientProperties.getEndpoints().getGrades();
-        String subjectsUrl = clientProperties.getBaseUrl() + clientProperties.getEndpoints().getSubjects();
 
         ResponseEntity<GradeDTO[]> gradesResponse = restTemplate.getForEntity(
                 gradesUrl,
                 GradeDTO[].class
         );
 
-        ResponseEntity<SubjectDTO[]> subjectsResponse = restTemplate.getForEntity(
-                subjectsUrl,
-                SubjectDTO[].class
-        );
 
         GradeDTO[] allGrades = gradesResponse.getBody();
 
-        SubjectDTO[] allSubjects = subjectsResponse.getBody();
-
-        if (allGrades == null || allGrades.length == 0 || allSubjects == null || allSubjects.length == 0) {
+        if (allGrades == null || allGrades.length == 0) {
             return Collections.emptyList();
         }
 
-        Map<UUID, String> subjectIdToClassName = Arrays.stream(allSubjects)
-                .collect(Collectors.toMap(
-                        SubjectDTO::getSubjectId,
-                        SubjectDTO::getClassName
-                ));
+        Map<UUID, String> subjectIdToClassName = subjectCacheService.getSubjectCache();
+        if (subjectIdToClassName.isEmpty()) {
+            return Collections.emptyList();
+        }
+
 
         List<GradeDTO> gradesInYear = Arrays.stream(allGrades)
                 .filter(grade -> isDateInRange(grade.getGradingDate(), startDate, endDate))
                 .toList();
 
-        Map<UUID, Double> averages = new HashMap<>();
         Map<String, List<Integer>> classNameToGrades = new HashMap<>();
 
         for (GradeDTO grade : gradesInYear) {
