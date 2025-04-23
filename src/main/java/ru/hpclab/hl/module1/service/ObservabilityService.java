@@ -67,7 +67,7 @@ public class ObservabilityService {
         }
     }
 
-    @Scheduled(fixedRate = 5000) // Every 5 seconds
+    @Scheduled(fixedRate = 30000)
     public void calculateAndLogStatistics() {
         long now = System.currentTimeMillis();
 
