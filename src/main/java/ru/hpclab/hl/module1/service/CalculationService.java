@@ -35,35 +35,41 @@ public class CalculationService {
     }
 
     public List<ClassAverageDTO> calculateAverageGradesForAllClasses(int year) {
+        Date startDate = getStartOfYear(year);
+        Date endDate = getEndOfYear(year);
+
+        // Measure external call separately
+        GradeDTO[] allGrades = observabilityService.measure(
+                ObservabilityService.OperationType.EXTERNAL_SERVICE_CALL,
+                "getGradesFromExternalService",
+                () -> {
+                    String gradesUrl = clientProperties.getBaseUrl() + clientProperties.getEndpoints().getGrades();
+                    ResponseEntity<GradeDTO[]> gradesResponse = restTemplate.getForEntity(
+                            gradesUrl,
+                            GradeDTO[].class
+                    );
+                    return gradesResponse.getBody();
+                }
+        );
+
+        // Measure just the calculation part
         return observabilityService.measure(
                 ObservabilityService.OperationType.STATISTICS_CALCULATION,
-                "calculateAverageGradesForAllClasses",
+                "processGradesCalculation",
                 () -> {
-                    Date startDate = getStartOfYear(year);
-                    Date endDate = getEndOfYear(year);
-
-                    GradeDTO[] allGrades = observabilityService.measure(
-                            ObservabilityService.OperationType.EXTERNAL_SERVICE_CALL,
-                            "getGradesFromExternalService",
-                            () -> {
-                                String gradesUrl = clientProperties.getBaseUrl() + clientProperties.getEndpoints().getGrades();
-                                ResponseEntity<GradeDTO[]> gradesResponse = restTemplate.getForEntity(
-                                        gradesUrl,
-                                        GradeDTO[].class
-                                );
-                                return gradesResponse.getBody();
-                            }
-                    );
-
                     if (allGrades == null || allGrades.length == 0) {
                         return Collections.emptyList();
                     }
 
-                    Map<UUID, String> subjectIdToClassName = subjectCacheService.getSubjectCache();
+                    Map<UUID, String> subjectIdToClassName = observabilityService.measure(
+                            ObservabilityService.OperationType.DB_ACCESS,
+                            "getSubjectCache",
+                            subjectCacheService::getSubjectCache
+                    );
+
                     if (subjectIdToClassName.isEmpty()) {
                         return Collections.emptyList();
                     }
-
 
                     List<GradeDTO> gradesInYear = Arrays.stream(allGrades)
                             .filter(grade -> isDateInRange(grade.getGradingDate(), startDate, endDate))
