@@ -3,6 +3,8 @@ package ru.hpclab.hl.module1.service;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.List;
@@ -73,12 +75,51 @@ public class ObservabilityService {
         Map<String, Object> mediumWindowStats = calculateStatsForWindow(now, MEDIUM_WINDOW_SEC);
         Map<String, Object> longWindowStats = calculateStatsForWindow(now, LONG_WINDOW_SEC);
 
-        // Here you would typically log or expose these statistics
-        // For example:
-        System.out.println("Statistics:");
-        System.out.println("Last 10s: " + shortWindowStats);
-        System.out.println("Last 30s: " + mediumWindowStats);
-        System.out.println("Last 60s: " + longWindowStats);
+        // Format and print the statistics
+        System.out.println("\n" + getCurrentDateTime() + " - Service Statistics");
+        System.out.println("==========================================");
+
+        printStatsForWindow("Last 10 seconds", shortWindowStats);
+        printStatsForWindow("Last 30 seconds", mediumWindowStats);
+        printStatsForWindow("Last 60 seconds", longWindowStats);
+
+        System.out.println("==========================================");
+    }
+
+    private void printStatsForWindow(String windowTitle, Map<String, Object> stats) {
+        System.out.println("\n" + windowTitle + ":");
+        System.out.println("------------------------------------------");
+
+        if (stats.isEmpty()) {
+            System.out.println("  No activity in this time window");
+            return;
+        }
+
+        for (Map.Entry<String, Object> typeEntry : stats.entrySet()) {
+            String type = typeEntry.getKey();
+            @SuppressWarnings("unchecked")
+            Map<String, Object> methods = (Map<String, Object>) typeEntry.getValue();
+
+            System.out.println("  " + type + ":");
+
+            for (Map.Entry<String, Object> methodEntry : methods.entrySet()) {
+                String method = methodEntry.getKey();
+                @SuppressWarnings("unchecked")
+                Map<String, Object> metrics = (Map<String, Object>) methodEntry.getValue();
+
+                System.out.println("    " + method + ":");
+                System.out.printf("      Count: %d\n", metrics.get("count"));
+                System.out.printf("      Avg Time: %.2f ms\n", metrics.get("avg_ms"));
+                System.out.printf("      Min Time: %d ms\n", metrics.get("min_ms"));
+                System.out.printf("      Max Time: %d ms\n", metrics.get("max_ms"));
+                System.out.printf("      Error Rate: %.2f%%\n", (double) metrics.get("error_rate") * 100);
+                System.out.println("      --------------------");
+            }
+        }
+    }
+
+    private String getCurrentDateTime() {
+        return LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
     }
 
     private Map<String, Object> calculateStatsForWindow(long currentTime, int windowSeconds) {
