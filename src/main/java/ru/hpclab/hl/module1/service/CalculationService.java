@@ -5,10 +5,13 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
+import ru.hpclab.hl.module1.DTO.ClassAverageDTO;
 import ru.hpclab.hl.module1.DTO.GradeDTO;
+import ru.hpclab.hl.module1.DTO.SubjectDTO;
 import ru.hpclab.hl.module1.Entity.GradeEntity;
 import ru.hpclab.hl.module1.repository.CalculationRepository;
 
+import javax.security.auth.Subject;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -27,36 +30,59 @@ public class CalculationService {
         this.calculationRepository = calculationRepository;
     }
 
-    public double calculateAverageGradeForClass(UUID subjectId, int year) {
+    public List<ClassAverageDTO> calculateAverageGradesForAllClasses(int year) {
         Date startDate = getStartOfYear(year);
         Date endDate = getEndOfYear(year);
 
-        // Fetch all grades from the grades service
         ResponseEntity<GradeDTO[]> response = restTemplate.getForEntity(
                 "http://school-journal-app:8080/grades",
                 GradeDTO[].class
         );
 
         GradeDTO[] allGrades = response.getBody();
-        if (allGrades == null || allGrades.length == 0) {
-            return 0.0;
+
+        ResponseEntity<SubjectDTO[]> subjects_dto = restTemplate.getForEntity(
+                "http://school-journal-app:8080/subjects",
+                SubjectDTO[].class
+        );
+
+        SubjectDTO[] allSubjects = subjects_dto.getBody();
+
+        if (allGrades == null || allGrades.length == 0 || allSubjects == null || allSubjects.length == 0) {
+            return Collections.emptyList();
         }
 
-        // Filter grades by subject and date range in memory
-        List<GradeDTO> filteredGrades = Arrays.stream(allGrades)
-                .filter(grade -> subjectId.equals(grade.getSubjectId()))
+        Map<UUID, String> subjectIdToClassName = Arrays.stream(allSubjects)
+                .collect(Collectors.toMap(
+                        SubjectDTO::getSubjectId,
+                        SubjectDTO::getClassName
+                ));
+
+        List<GradeDTO> gradesInYear = Arrays.stream(allGrades)
                 .filter(grade -> isDateInRange(grade.getGradingDate(), startDate, endDate))
                 .toList();
 
-        if (filteredGrades.isEmpty()) {
-            return 0.0;
+        Map<UUID, Double> averages = new HashMap<>();
+        Map<String, List<Integer>> classNameToGrades = new HashMap<>();
+
+        for (GradeDTO grade : gradesInYear) {
+            String className = subjectIdToClassName.get(grade.getSubjectId());
+            if (className != null) {
+                classNameToGrades.computeIfAbsent(className, k -> new ArrayList<>())
+                        .add(grade.getGradeValue());
+            }
         }
 
-        double sum = filteredGrades.stream()
-                .mapToInt(GradeDTO::getGradeValue)
-                .sum();
+        List<ClassAverageDTO> result = new ArrayList<>();
+        for (Map.Entry<String, List<Integer>> entry : classNameToGrades.entrySet()) {
+            double average = entry.getValue().stream()
+                    .mapToInt(Integer::intValue)
+                    .average()
+                    .orElse(0.0);
+            result.add(new ClassAverageDTO(entry.getKey(), average));
+        }
 
-        return sum / filteredGrades.size();
+        return result;
     }
 
     private boolean isDateInRange(Date dateToCheck, Date startDate, Date endDate) {
