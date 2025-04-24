@@ -9,4 +9,4 @@ subjectcache:
   printdelay: 5000
   cachestatstring: Subject cache statistics
   statistics:
-    rate: 5000
+    rate: 30000
