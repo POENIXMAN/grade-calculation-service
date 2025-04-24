@@ -31,12 +31,12 @@ public class CalculationController {
 
     @GetMapping("/average/year/{year}")
     public List<ClassAverageDTO> calculateAverageGradesForAllClasses(@PathVariable int year) {
-        return observabilityService.measure(
-                ObservabilityService.OperationType.CONTROLLER_METHOD,
-                "getAverageGrades",
-                () -> ResponseEntity.ok(calculationService.calculateAverageGradesForAllClasses(year))
-        ).getBody();
-//        return calculationService.calculateAverageGradesForAllClasses(year);
+        observabilityService.start("controller.calculateAverageGradesForAllClasses");
+        try {
+            return calculationService.calculateAverageGradesForAllClasses(year);
+        } finally {
+            observabilityService.stop("controller.calculateAverageGradesForAllClasses");
+        }
     }
 }
 
