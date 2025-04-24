@@ -68,7 +68,7 @@ public class ObservabilityService {
 
         public synchronized void stop() {
             if (startTime > 0) {
-                long duration = (System.nanoTime() - startTime) / 1_000_000;
+                long duration = System.currentTimeMillis() - startTime;
                 records.add(new TimingRecord(System.currentTimeMillis(), duration));
                 startTime = 0;
             }
