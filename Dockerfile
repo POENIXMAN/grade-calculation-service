@@ -20,7 +20,7 @@ RUN ./gradlew clean build --no-daemon
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /opt/app
 
-COPY --from=builder /opt/app/build/libs/*.jar app.jar
+COPY --from=builder /opt/app/build/libs/*-SNAPSHOT.jar app.jar
 
 EXPOSE 8081
 ENTRYPOINT ["java", "-jar", "/opt/app/app.jar"]
