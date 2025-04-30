@@ -1,5 +1,6 @@
 package ru.hpclab.hl.module1.service;
 
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -28,6 +29,7 @@ public class CalculationService {
         this.observabilityService = observabilityService;
     }
 
+    @CircuitBreaker(name = "CORE_SERVICE")
     public List<ClassAverageDTO> calculateAverageGradesForAllClasses(int year) {
         observabilityService.start("service.calculateAverageGradesForAllClasses.total");
         try {
