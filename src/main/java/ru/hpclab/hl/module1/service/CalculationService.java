@@ -1,5 +1,7 @@
 package ru.hpclab.hl.module1.service;
 
+import io.github.resilience4j.retry.RetryRegistry;
+import io.github.resilience4j.retry.annotation.Retry;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -17,17 +19,20 @@ public class CalculationService {
     private final SchoolJournalClientProperties clientProperties;
     private final SubjectCacheService subjectCacheService;
     private final ObservabilityService observabilityService;
+    private final RetryRegistry retryRegistry;
 
     @Autowired
     public CalculationService(
-            RestTemplate restTemplate, SchoolJournalClientProperties clientProperties, SubjectCacheService subjectCacheService, ObservabilityService observabilityService
+            RestTemplate restTemplate, SchoolJournalClientProperties clientProperties, SubjectCacheService subjectCacheService, ObservabilityService observabilityService, RetryRegistry retryRegistry
     ) {
         this.restTemplate = restTemplate;
         this.clientProperties = clientProperties;
         this.subjectCacheService = subjectCacheService;
         this.observabilityService = observabilityService;
+        this.retryRegistry = retryRegistry;
     }
 
+    @Retry(name = "CORE_SERVICE")
     public List<ClassAverageDTO> calculateAverageGradesForAllClasses(int year) {
         observabilityService.start("service.calculateAverageGradesForAllClasses.total");
         try {

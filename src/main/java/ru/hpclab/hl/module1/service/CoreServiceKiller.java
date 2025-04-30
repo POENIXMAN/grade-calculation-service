@@ -28,7 +28,6 @@ public class CoreServiceKiller {
     }
 
     @Scheduled(fixedRate = 10000)
-    @Retry(name = "coreServiceRetry")
     public void triggerCrash() {
         try {
             log.info("Attempting to crash core service...");
@@ -37,7 +36,6 @@ public class CoreServiceKiller {
         }
         catch (ResourceAccessException e) {
             log.warn("Expected crash behavior: {}", e.getMessage());
-            throw e;
         }
     }
 }
