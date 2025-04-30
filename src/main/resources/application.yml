@@ -3,6 +3,7 @@ school-journal:
   endpoints:
     grades: /grades
     subjects: /subjects
+    coreCrash: /core/crash
 
 
 subjectcache:

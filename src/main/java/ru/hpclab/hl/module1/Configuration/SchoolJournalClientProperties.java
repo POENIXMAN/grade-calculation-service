@@ -18,6 +18,7 @@ public class SchoolJournalClientProperties {
     public static class Endpoints {
         private String grades;
         private String subjects;
+        private String coreCrash;
     }
 
 }
