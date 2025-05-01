@@ -10,34 +10,34 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.client.*;
 
-
-@Service
-public class CoreServiceKiller {
-    private final RestTemplate restTemplate;
-    private final String crashUrl;
-    private static final Logger log = LoggerFactory.getLogger(CoreServiceKiller.class);
-
-    public CoreServiceKiller(
-            RestTemplate restTemplate,
-            @Value("${school-journal.base-url}") String baseUrl,
-            @Value("${school-journal.endpoints.coreCrash}") String crashEndpoint
-    ) {
-        this.restTemplate = restTemplate;
-        this.crashUrl = baseUrl + crashEndpoint;
-        log.info("Configured crash endpoint: {}", crashUrl);
-    }
-
-    @Scheduled(fixedRate = 10000)
-    @Retry(name = "coreServiceRetry")
-    public void triggerCrash() {
-        try {
-            log.info("Attempting to crash core service...");
-            restTemplate.postForEntity(crashUrl, null, String.class);
-            log.error("Core service DID NOT crash as expected!");
-        }
-        catch (ResourceAccessException e) {
-            log.warn("Expected crash behavior: {}", e.getMessage());
-            throw e;
-        }
-    }
-}
+//
+//@Service
+//public class CoreServiceKiller {
+//    private final RestTemplate restTemplate;
+//    private final String crashUrl;
+//    private static final Logger log = LoggerFactory.getLogger(CoreServiceKiller.class);
+//
+//    public CoreServiceKiller(
+//            RestTemplate restTemplate,
+//            @Value("${school-journal.base-url}") String baseUrl,
+//            @Value("${school-journal.endpoints.coreCrash}") String crashEndpoint
+//    ) {
+//        this.restTemplate = restTemplate;
+//        this.crashUrl = baseUrl + crashEndpoint;
+//        log.info("Configured crash endpoint: {}", crashUrl);
+//    }
+//
+//    @Scheduled(fixedRate = 10000)
+//    @Retry(name = "coreServiceRetry")
+//    public void triggerCrash() {
+//        try {
+//            log.info("Attempting to crash core service...");
+//            restTemplate.postForEntity(crashUrl, null, String.class);
+//            log.error("Core service DID NOT crash as expected!");
+//        }
+//        catch (ResourceAccessException e) {
+//            log.warn("Expected crash behavior: {}", e.getMessage());
+//            throw e;
+//        }
+//    }
+//}
