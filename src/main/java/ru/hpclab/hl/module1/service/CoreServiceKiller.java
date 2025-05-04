@@ -27,7 +27,7 @@ public class CoreServiceKiller {
         log.info("Configured crash endpoint: {}", crashUrl);
     }
 
-    @Scheduled(fixedRate = 10000)
+    @Scheduled(fixedRateString = "${app.scheduler.crash.rate}")
     public void triggerCrash() {
         try {
             log.info("Attempting to crash core service...");
