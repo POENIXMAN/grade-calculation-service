@@ -52,13 +52,10 @@ public class CalculationService {
                 return Collections.emptyList();
             }
 
-            // Measure cache access
-            observabilityService.start("service.calculateAverageGradesForAllClasses.cache_access");
             Map<UUID, String> subjectIdToClassName = subjectCacheService.getSubjectCache();
             if (subjectIdToClassName.isEmpty()) {
                 return Collections.emptyList();
             }
-            observabilityService.stop("service.calculateAverageGradesForAllClasses.cache_access");
 
             List<GradeDTO> gradesInYear = Arrays.stream(allGrades)
                     .filter(grade -> isDateInRange(grade.getGradingDate(), startDate, endDate))

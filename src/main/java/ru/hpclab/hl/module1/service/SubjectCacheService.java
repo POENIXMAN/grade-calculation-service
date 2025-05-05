@@ -37,15 +37,43 @@ public class SubjectCacheService {
             this.observabilityService = observabilityService;
         }
 
-        @SuppressWarnings("unchecked")
-        public Map<UUID, String> getSubjectCache() {
+    @SuppressWarnings("unchecked")
+    public Map<UUID, String> getSubjectCache() {
+        observabilityService.start("cache.subject.access.total");
+        try {
             ValueOperations<String, Object> valueOps = redisTemplate.opsForValue();
+
+            observabilityService.start("cache.subject.redis.get");
             Map<UUID, String> cache = (Map<UUID, String>) valueOps.get(CACHE_KEY);
+            observabilityService.stop("cache.subject.redis.get");
+
             if (cache == null || cache.isEmpty()) {
-                return refreshCache();
+                observabilityService.start("cache.subject.access.miss");
+                try {
+                    return refreshCache();
+                } finally {
+                    observabilityService.stop("cache.subject.access.miss");
+                }
+            } else {
+                // Cache hit (return cached data)
+                observabilityService.start("cache.subject.access.hit");
+                observabilityService.stop("cache.subject.access.hit");
+                return cache;
             }
-            return cache;
+        } finally {
+            observabilityService.stop("cache.subject.access.total");
         }
+    }
+
+        @SuppressWarnings("unchecked")
+//        public Map<UUID, String> getSubjectCache() {
+//            ValueOperations<String, Object> valueOps = redisTemplate.opsForValue();
+//            Map<UUID, String> cache = (Map<UUID, String>) valueOps.get(CACHE_KEY);
+//            if (cache == null || cache.isEmpty()) {
+//                return refreshCache();
+//            }
+//            return cache;
+//        }
 
         public Map<UUID, String> refreshCache() {
             String subjectsUrl = clientProperties.getBaseUrl() + clientProperties.getEndpoints().getSubjects();
