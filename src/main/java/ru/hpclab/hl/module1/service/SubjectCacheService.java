@@ -39,11 +39,31 @@ public class SubjectCacheService {
         this.observabilityService = observabilityService;
     }
 
+//    public Map<UUID, String> getSubjectCache() {
+//        if (subjectCache.isEmpty() || System.currentTimeMillis() - lastUpdateTime > TimeUnit.HOURS.toMillis(1)) {
+//            refreshCache();
+//        }
+//        return subjectCache;
+//    }
+
     public Map<UUID, String> getSubjectCache() {
-        if (subjectCache.isEmpty() || System.currentTimeMillis() - lastUpdateTime > TimeUnit.HOURS.toMillis(1)) {
-            refreshCache();
+        observabilityService.start("cache.subject.access.total");
+        try {
+            if (subjectCache.isEmpty() || System.currentTimeMillis() - lastUpdateTime > TimeUnit.HOURS.toMillis(1)) {
+                observabilityService.start("cache.subject.access.miss");
+                try {
+                    refreshCache();
+                } finally {
+                    observabilityService.stop("cache.subject.access.miss");
+                }
+            } else {
+                observabilityService.start("cache.subject.access.hit");
+                observabilityService.stop("cache.subject.access.hit");
+            }
+            return subjectCache;
+        } finally {
+            observabilityService.stop("cache.subject.access.total");
         }
-        return subjectCache;
     }
 
     public void refreshCache() {
